@@ -37,11 +37,14 @@ export default function ContasPage() {
 
     const calculateTotal = () => {
         return contas.reduce((total, conta) => {
-            const valor = typeof conta.valor === 'string' ? parseFloat(conta.valor) : 0;
-            return total + valor;
+            if (conta.status === 'Atrasada' || conta.status === 'Aberta') {
+                const valor = typeof conta.valor === 'string' ? parseFloat(conta.valor) : 0;
+                return total + valor;
+            }
+            return total;
         }, 0);
-    };      
-
+    };
+    
     function capitalizeFirstLetter(str: string) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }    
@@ -276,7 +279,7 @@ export default function ContasPage() {
             )}
 
             <div className="footer">
-                <p><b>Total:</b> R$ {calculateTotal().toFixed(2)}</p>
+                <p><b>Total em aberto:</b> R$ {calculateTotal().toFixed(2)}</p>
             </div>
 
             <style jsx>{`
