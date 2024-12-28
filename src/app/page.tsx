@@ -1,101 +1,215 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import { useRouter } from 'next/navigation';
+import { FiList, FiMoon, FiSun, FiFileText, FiUser } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+export default function HomePage() {
+    const router = useRouter();
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            router.push('/login');
+        }
+
+        const storedMode = localStorage.getItem('darkMode');
+        setIsDarkMode(storedMode === 'true');
+    }, [router]);
+
+    const toggleDarkMode = () => {
+        const newMode = !isDarkMode;
+        setIsDarkMode(newMode);
+        localStorage.setItem('darkMode', newMode.toString());
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        router.push('/login');
+    };
+
+    const toggleMenu = () => {
+        setIsMenuVisible((prev) => !prev);
+    };
+
+    return (
+        <>
+            <div className={`header ${isDarkMode ? 'dark' : ''}`}>
+                <div className="header-left">
+                    <FiList size={30} />
+                    <h1>Categorias</h1>
+                </div>
+                <div className="header-right">
+                    <button className="toggle-dark-mode" onClick={toggleDarkMode}>
+                        {isDarkMode ? <FiSun size={24} color="white" /> : <FiMoon size={24} color="black" />}
+                    </button>
+                    <div className="user-menu">
+                        <button className="user-icon" onClick={toggleMenu}>
+                            <FiUser size={24} color={isDarkMode ? 'white' : 'black'} />
+                        </button>
+                        <div
+                            className={`menu-dropdown ${isDarkMode ? 'dark' : ''} ${
+                                isMenuVisible ? 'visible' : 'hidden'
+                            }`}
+                        >
+                            <button onClick={handleLogout}>Sair</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className={`home-container ${isDarkMode ? 'dark' : ''}`}>
+                <button className="contas-button" onClick={() => router.push('/contas')}>
+                    <FiFileText size={24} />
+                    <span>Contas</span>
+                </button>
+            </div>
+
+            <style jsx>{`
+                .header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1rem;
+                    background-color: white;
+                    color: black;
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+                .header.dark {
+                    background-color: #121212;
+                    color: white;
+                }
+                .header-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                }
+                .header-left h1 {
+                    margin: 0;
+                    font-size: 1.3rem;
+                    font-weight: bold;
+                }
+                .header-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+               .toggle-dark-mode,
+                .user-icon {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0.5rem;
+                    border-radius: 50%;
+                    transition: background-color 0.3s ease;
+                }
+                .toggle-dark-mode:hover,
+                .user-icon:hover {
+                    background-color: #e0e0e0;
+                }
+                .header.dark .toggle-dark-mode:hover,
+                .header.dark .user-icon:hover {
+                    background-color: #333;
+                }
+                .user-menu {
+                    position: relative;
+                }
+                .menu-dropdown {
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    margin-top: 0.5rem;
+                    background-color: white;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    z-index: 10;
+                    opacity: 0;
+                    transform: translateY(-10px);
+                    pointer-events: none;
+                    transition: opacity 0.3s ease, transform 0.3s ease;
+                }
+                .menu-dropdown.dark {
+                    background-color: #333;
+                    color: white;
+                }
+                .menu-dropdown.visible {
+                    opacity: 1;
+                    transform: translateY(0);
+                    pointer-events: auto;
+                }
+                .menu-dropdown.hidden {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                    pointer-events: none;
+                }
+                .menu-dropdown button {
+                    width: 100%;
+                    padding: 0.75rem 1rem;
+                    background: none;
+                    border: none;
+                    text-align: left;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    transition: background-color 0.3s ease;
+                }
+                .menu-dropdown button:hover {
+                    background-color: #f0f0f0;
+                }
+                .menu-dropdown.dark button:hover {
+                    background-color: #444;
+                }
+                .home-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    height: calc(100vh);
+                    background-color: #f1f1f1;
+                    color: #333;
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+                .home-container.dark {
+                    background-color: #121212;
+                    color: #f5f5f5;
+                }
+                .contas-button {
+                    width: 95%;
+                    max-width: 500px;
+                    padding: 1rem;
+                    margin-top: 1rem;
+                    background-color: #fff;
+                    color: #121212;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: background-color 0.3s ease, transform 0.2s ease;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+                .contas-button:hover {
+                    background-color: #ddd;
+                    transform: translateY(-2px);
+                }
+                .home-container.dark .contas-button {
+                    background-color: #333;
+                    color: #f5f5f5;
+                }
+                .home-container.dark .contas-button:hover {
+                    background-color: #444;
+                }
+
+                .contas-button svg {
+                    vertical-align: middle;
+                }
+            `}</style>
+        </>
+    );
 }
