@@ -35,6 +35,13 @@ export default function ContasPage() {
         fetchContas();
     }, []);
 
+    const calculateTotal = () => {
+        return contas.reduce((total, conta) => {
+            const valor = typeof conta.valor === 'string' ? parseFloat(conta.valor) : 0;
+            return total + valor;
+        }, 0);
+    };      
+
     function capitalizeFirstLetter(str: string) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }    
@@ -268,6 +275,10 @@ export default function ContasPage() {
                 </div>
             )}
 
+            <div className="footer">
+                <p><b>Total:</b> R$ {calculateTotal().toFixed(2)}</p>
+            </div>
+
             <style jsx>{`
                 .header {
                     display: flex;
@@ -485,8 +496,6 @@ export default function ContasPage() {
                     z-index: 1000;
                     animation: fadeIn 0.3s ease-in-out forwards;
                 }
-
-                /* Modal Container */
                 .modal {
                     background-color: #fff;
                     border-radius: 12px;
@@ -588,16 +597,12 @@ export default function ContasPage() {
                 .modal.dark .modal-actions button:last-child:hover {
                     background-color: #444;
                 }
-
-                /* Error Message */
                 .error-message {
                     color: #dc3545;
                     font-size: 0.875rem;
                     margin-bottom: 1rem;
                     text-align: left;
                 }
-
-                /* Animations */
                 @keyframes fadeIn {
                     from {
                         opacity: 0;
@@ -616,6 +621,20 @@ export default function ContasPage() {
                         opacity: 1;
                         transform: translateY(0);
                     }
+                }
+                .footer {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    background-color: ${isDarkMode ? '#1e1e1e' : '#f9f9f9'};
+                    color: ${isDarkMode ? 'white' : 'black'};
+                    padding: 0.8rem;
+                    text-align: center;
+                    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+                }
+                .footer p {
+                    font-size: 18px;
                 }
             `}</style>
         </>
