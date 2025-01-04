@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import dotenv from 'dotenv'
 
 module.exports = {
   async rewrites() {
@@ -11,6 +10,10 @@ module.exports = {
       {
         source: '/contas/:path*',
         destination: `${process.env.API_URL}/contas/:path*`
+      },
+      {
+        source: '/emprestimos/:path*',
+        destination: `${process.env.API_URL}/emprestimos/:path*`
       },
     ];
   },
