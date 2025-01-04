@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { FiList, FiMoon, FiSun, FiFileText, FiUser } from 'react-icons/fi';
+import { FaMoneyBillAlt } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 
 export default function HomePage() {
@@ -65,6 +66,10 @@ export default function HomePage() {
                 <button className="contas-button" onClick={() => router.push('/contas')}>
                     <FiFileText size={24} />
                     <span>Contas</span>
+                </button>
+                <button className="emprestimos-button" onClick={() => router.push('/emprestimos')}>
+                    <FaMoneyBillAlt size={24} />
+                    <span>Empréstimos</span>
                 </button>
             </div>
 
@@ -175,7 +180,7 @@ export default function HomePage() {
                     background-color: #121212;
                     color: #f5f5f5;
                 }
-                .contas-button {
+                .emprestimos-button, .contas-button {
                     width: 95%;
                     max-width: 500px;
                     padding: 1rem;
@@ -194,19 +199,19 @@ export default function HomePage() {
                     align-items: center;
                     gap: 0.75rem;
                 }
-                .contas-button:hover {
+                .emprestimos-button:hover, .contas-button:hover {
                     background-color: #ddd;
                     transform: translateY(-2px);
                 }
-                .home-container.dark .contas-button {
+                .home-container.dark .contas-button, .home-container.dark .emprestimos-button {
                     background-color: #333;
                     color: #f5f5f5;
                 }
-                .home-container.dark .contas-button:hover {
+                .home-container.dark .contas-button:hover, .home-container.dark .emprestimos-button:hover {
                     background-color: #444;
                 }
 
-                .contas-button svg {
+                .emprestimos-button svg, .contas-button svg {
                     vertical-align: middle;
                 }
             `}</style>

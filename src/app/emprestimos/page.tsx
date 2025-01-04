@@ -2,22 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiEdit, FiTrash, FiPlus, FiFileText, FiSun, FiMoon, FiArrowLeft, FiUser } from 'react-icons/fi';
+import { FiEdit, FiTrash, FiPlus, FiDollarSign, FiSun, FiMoon, FiArrowLeft, FiUser } from 'react-icons/fi';
 
-interface Conta {
+interface Emprestimo {
     id: number;
     nome: string;
     valor: number;
+    parcelas: number;
+    valor_pago: number;
+    valor_pago_cumulativo?: number;
+    valor_restante?: number;
     status: string;
-    referencia: string;
 }
 
-export default function ContasPage() {
+export default function EmprestimosPage() {
     const router = useRouter();
-    const [contas, setContas] = useState<Conta[]>([]);
+    const [emprestimos, setEmprestimos] = useState<Emprestimo[]>([]);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [modalData, setModalData] = useState<Partial<Conta>>({});
+    const [modalData, setModalData] = useState<Partial<Emprestimo>>({});
     const [error, setError] = useState('');
     const [isMenuVisible, setIsMenuVisible] = useState(false);
 
@@ -32,30 +35,17 @@ export default function ContasPage() {
     }, [router]);
 
     useEffect(() => {
-        fetchContas();
+        fetchEmprestimos();
     }, []);
 
-    const calculateTotal = () => {
-        return contas.reduce((total, conta) => {
-            if (conta.status === 'Atrasada' || conta.status === 'Aberta') {
-                const valor = typeof conta.valor === 'string' ? parseFloat(conta.valor) : 0;
-                return total + valor;
-            }
-            return total;
-        }, 0);
-    };
-    
-    function capitalizeFirstLetter(str: string) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }    
-
-    const fetchContas = async () => {
+    const fetchEmprestimos = async () => {
         const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId'); 
+        const userId = localStorage.getItem('userId');
 
         if (token && userId) {
             try {
-                const res = await fetch('/contas/listar', {
+                console.log('Fazendo requisição para /emprestimos/listar...');
+                const res = await fetch('/emprestimos/listar', {
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -63,13 +53,29 @@ export default function ContasPage() {
                     },
                     body: JSON.stringify({ usuario_id: userId }),
                 });
+
+                if (!res.ok) {
+                    console.error(`Erro na requisição: ${res.status} ${res.statusText}`);
+                    return;
+                }
+
                 const data = await res.json();
-                setContas(data);
+
+                setEmprestimos(data);
             } catch (err) {
-                console.error(err);
+                console.error('Erro ao buscar empréstimos:', err);
             }
+        } else {
+            console.warn('Token ou User ID não encontrado no localStorage.');
         }
     };
+
+    const calculateRemaining = (emprestimo: Emprestimo) =>
+        emprestimo.valor - emprestimo.valor_pago;
+
+    function capitalizeFirstLetter(str: string) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
 
     const toggleDarkMode = () => {
         const newMode = !isDarkMode;
@@ -87,26 +93,34 @@ export default function ContasPage() {
         setIsMenuVisible((prev) => !prev);
     };
 
-    const openModal = (conta?: Conta) => {
-        const currentMonthYear = new Date().toISOString().slice(0, 7);
+    const openModal = (emprestimo?: Emprestimo) => {
         setModalData(
-            conta || { nome: '', valor: 0, status: 'Aberta', referencia: currentMonthYear }
+            emprestimo
+                ? {
+                    ...emprestimo,
+                    valor_pago_cumulativo: emprestimo.valor_pago,
+                }
+                : { nome: '', valor: 0, parcelas: 1, valor_pago: 0, valor_pago_cumulativo: 0, status: 'pendente' }
         );
         setShowModal(true);
-    };    
+    };
 
     const closeModal = () => {
         setShowModal(false);
-        setModalData({ nome: '', valor: 0, status: 'Aberta' });
+        setModalData({ nome: '', valor: 0, parcelas: 1, valor_pago: 0 });
         setError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
+        const isEditing = !!modalData.id;
+        const endpoint = isEditing
+            ? `/emprestimos/${modalData.id}/pagamento`
+            : '/emprestimos/criar';
+        const method = isEditing ? 'PUT' : 'POST';
 
-        const endpoint = modalData.id ? `/contas/editar/${modalData.id}` : '/contas/criar';
-        const method = modalData.id ? 'PUT' : 'POST';
+        const { valor_restante, ...dataToSend } = modalData;
 
         try {
             const res = await fetch(endpoint, {
@@ -115,35 +129,37 @@ export default function ContasPage() {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(modalData),
+                body: JSON.stringify({ ...dataToSend, usuario_id: localStorage.getItem('userId') }),
             });
 
             if (res.ok) {
-                fetchContas();
+                fetchEmprestimos();
                 closeModal();
             } else {
                 const data = await res.json();
-                setError(data.message || 'Erro ao salvar a conta.');
+                setError(data.message || 'Erro ao salvar o empréstimo.');
             }
         } catch (err) {
             console.error(err);
             setError('Erro ao se conectar com o servidor.');
+        } finally {
+            setModalData((prev) => ({ ...prev, valor_pago_cumulativo: 0 }));
         }
     };
 
     const handleDelete = async (id: number) => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`/contas/deletar/${id}`, {
+            const res = await fetch(`/emprestimos/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.ok) {
-                setContas((prev) => prev.filter((conta) => conta.id !== id));
+                setEmprestimos((prev) => prev.filter((emprestimo) => emprestimo.id !== id));
             } else {
                 const data = await res.json();
-                setError(data.message || 'Erro ao deletar a conta.');
+                setError(data.message || 'Erro ao deletar o empréstimo.');
             }
         } catch (err) {
             console.error(err);
@@ -160,11 +176,11 @@ export default function ContasPage() {
                     >
                         <FiArrowLeft size={24} />
                     </button>
-                    <FiFileText size={30} />
-                    <h1>Minhas Contas</h1>
+                    <FiDollarSign size={30} />
+                    <h1>Meus Empréstimos</h1>
                 </div>
                 <div className="header-right">
-                    <button className="create-account-button" onClick={() => openModal()}>
+                    <button className="create-loan-button" onClick={() => openModal()}>
                         <FiPlus size={24} color={isDarkMode ? 'white' : 'black'} />
                     </button>
                     <button className="toggle-dark-mode" onClick={toggleDarkMode}>
@@ -175,9 +191,8 @@ export default function ContasPage() {
                             <FiUser size={24} color={isDarkMode ? 'white' : 'black'} />
                         </button>
                         <div
-                            className={`menu-dropdown ${isDarkMode ? 'dark' : ''} ${
-                                isMenuVisible ? 'visible' : 'hidden'
-                            }`}
+                            className={`menu-dropdown ${isDarkMode ? 'dark' : ''} ${isMenuVisible ? 'visible' : 'hidden'
+                                }`}
                         >
                             <button onClick={handleLogout}>Sair</button>
                         </div>
@@ -185,124 +200,141 @@ export default function ContasPage() {
                 </div>
             </div>
 
-            <div className={`contas-container ${isDarkMode ? 'dark' : ''}`}>
+            <div className={`emprestimos-container ${isDarkMode ? 'dark' : ''}`}>
                 {error && <p className="error-message">{error}</p>}
-                    <ul className="contas-list">
-                        {contas.map((conta) => (
-                            <li key={conta.id}>
-                                <div className="conta-info">
-                                    <span className="conta-nome">{conta.nome}</span>
-                                    <span className="conta-valor">R$ {Number(conta.valor).toFixed(2)}</span>
-                                    <span className="conta-referencia">
-                                        {(() => {
-                                            if (!conta.referencia) {
-                                                console.log('Referência não definida:', conta);
-                                                return 'Mês/Ano não definido';
-                                            }
-
-                                            try {
-                                                const parsedDate = new Date(`${conta.referencia}-01T00:00:00`);
-                                                console.log('Data parseada:', parsedDate);
-
-                                                const formattedDate = parsedDate.toLocaleDateString('pt-BR', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                });
-                                    
-                                                return capitalizeFirstLetter(formattedDate);
-                                            } catch (error) {
-                                                console.error('Erro ao processar a referência:', conta.referencia, error);
-                                                return 'Erro ao definir referência';
-                                            }
-                                        })()}
+                <ul className="emprestimos-list">
+                    {emprestimos.map((emprestimo) => (
+                        <li key={emprestimo.id}>
+                            <div className="emprestimo-info">
+                                <span className="emprestimo-nome">{emprestimo.nome}</span>
+                                <span className="emprestimo-valor">
+                                    Total: R$ {Number(emprestimo.valor).toFixed(2)}
+                                </span>
+                                <span className="emprestimo-valor-pago">
+                                    Pago: R$ {Number(emprestimo.valor_pago).toFixed(2)}
+                                </span>
+                                {calculateRemaining(emprestimo) > 0 && (
+                                    <span className="emprestimo-valor-restante">
+                                        Restante: R$ {calculateRemaining(emprestimo).toFixed(2)}
                                     </span>
+                                )}
+                            </div>
+                            <div className="action-container">
+                                <span className={`emprestimo-status ${emprestimo.status.toLowerCase()}`}>
+                                    {capitalizeFirstLetter(emprestimo.status)}
+                                </span>
+                                <div className="action-buttons">
+                                    <button className="edit-button" onClick={() => openModal(emprestimo)}>
+                                        <FiEdit size={18} />
+                                    </button>
+                                    <button className="delete-button" onClick={() => handleDelete(emprestimo.id)}>
+                                        <FiTrash size={18} />
+                                    </button>
                                 </div>
-                                <div className="action-container">
-                                    <span className={`conta-status ${conta.status.toLowerCase()}`}>{conta.status}</span>
-                                    <div className="action-buttons">
-                                        <button className="edit-button" onClick={() => openModal(conta)}>
-                                            <FiEdit size={18} />
-                                        </button>
-                                        <button className="delete-button" onClick={() => handleDelete(conta.id)}>
-                                            <FiTrash size={18} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             </div>
 
             {showModal && (
                 <div className="modal-backdrop">
                     <div className={`modal ${isDarkMode ? 'dark' : ''}`}>
-                    <form onSubmit={handleSubmit}>
-                        <h2>{modalData.id ? 'Editar Conta' : 'Criar Conta'}</h2>
-                        {error && <p className="error-message">{error}</p>}
+                        <form onSubmit={handleSubmit}>
+                            <h2>{modalData.id ? 'Editar Empréstimo' : 'Criar Empréstimo'}</h2>
+                            {error && <p className="error-message">{error}</p>}
 
-                        <div className="form-group">
-                            <label htmlFor="nome">Nome:</label>
-                            <input
-                                id="nome"
-                                type="text"
-                                placeholder="Nome da conta"
-                                value={modalData.nome || ''}
-                                onChange={(e) => setModalData({ ...modalData, nome: e.target.value })}
-                                required
-                            />
-                        </div>
+                            <div className="form-group">
+                                <label htmlFor="nome">Nome:</label>
+                                <input
+                                    id="nome"
+                                    type="text"
+                                    placeholder="Nome"
+                                    value={modalData.nome || ''}
+                                    onChange={(e) => setModalData({ ...modalData, nome: e.target.value })}
+                                    required
+                                />
+                            </div>
 
-                        <div className="form-group">
-                            <label htmlFor="valor">Valor:</label>
-                            <input
-                                id="valor"
-                                type="number"
-                                placeholder="Valor"
-                                value={modalData.valor !== undefined ? modalData.valor || '' : ''}
-                                onChange={(e) => setModalData({ ...modalData, valor: Number(e.target.value) })}
-                                required
-                            />
-                        </div>
+                            <div className="form-group">
+                                <label htmlFor="valor">Valor Total:</label>
+                                <input
+                                    id="valor"
+                                    type="number"
+                                    placeholder="Valor Total"
+                                    value={modalData.valor === undefined || modalData.valor === 0 ? '' : modalData.valor}
+                                    onChange={(e) => {
+                                        const newValue = e.target.value === '' ? 0 : Number(e.target.value);
+                                        setModalData({ ...modalData, valor: newValue });
+                                    }}
+                                    required
+                                />
+                            </div>
 
-                        <div className="form-group">
-                            <label htmlFor="status">Status:</label>
-                            <select
-                                id="status"
-                                value={modalData.status || 'Aberta'}
-                                onChange={(e) => setModalData({ ...modalData, status: e.target.value })}
-                                required
-                            >
-                                <option value="Aberta">Aberta</option>
-                                <option value="Paga">Paga</option>
-                                <option value="Atrasada">Atrasada</option>
-                            </select>
-                        </div>
+                            <div className="form-group">
+                                <label htmlFor="parcelas">Parcelas:</label>
+                                <input
+                                    id="parcelas"
+                                    type="number"
+                                    placeholder="Parcelas"
+                                    value={modalData.parcelas !== undefined ? modalData.parcelas : ''}
+                                    onChange={(e) => setModalData({ ...modalData, parcelas: Number(e.target.value) })}
+                                    required
+                                />
+                            </div>
 
-                        <div className="form-group">
-                            <label htmlFor="referencia">Mês de Referência:</label>
-                            <input
-                                id="referencia"
-                                type="month"
-                                value={modalData.referencia?.slice(0, 7) || ''}
-                                onChange={(e) => setModalData({ ...modalData, referencia: `${e.target.value}` })}
-                            />
-                        </div>
+                            <div className="form-group">
+                                <label htmlFor="valor_pago">Valor Pago:</label>
+                                <input
+                                    id="valor_pago"
+                                    type="number"
+                                    placeholder="Digite o valor pago"
+                                    value={modalData.valor_pago === undefined || modalData.valor_pago === 0 ? '' : modalData.valor_pago}
+                                    onChange={(e) => {
+                                        const newValue = e.target.value === '' ? 0 : Number(e.target.value);
 
-                        <div className="modal-actions">
-                            <button type="submit">Salvar</button>
-                            <button type="button" onClick={closeModal}>
-                                Cancelar
-                            </button>
-                        </div>
-                    </form>
+                                        setModalData((prev) => ({
+                                            ...prev,
+                                            valor_pago: newValue,
+                                            valor_pago_cumulativo: prev.valor_pago_cumulativo
+                                                ? prev.valor_pago_cumulativo - (prev.valor_pago || 0) + newValue
+                                                : newValue,
+                                        }));
+                                    }}
+                                />
+                                {modalData.valor !== undefined &&
+                                    modalData.valor > 0 &&
+                                    (modalData.valor - (modalData.valor_pago_cumulativo || 0)) > 0 && (
+                                        <p className="remaining-value">
+                                            Restante: R$ {(modalData.valor - (modalData.valor_pago_cumulativo || 0)).toFixed(2)}
+                                        </p>
+                                    )}
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="status">Status:</label>
+                                <select
+                                    id="status"
+                                    value={modalData.status || 'pendente'}
+                                    onChange={(e) => setModalData({ ...modalData, status: e.target.value })}
+                                    required
+                                >
+                                    <option value="pendente">Pendente</option>
+                                    <option value="quitado">Quitado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button type="submit">Salvar</button>
+                                <button type="button" onClick={closeModal}>
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
-
-            <div className="footer">
-                <p><b>Total em aberto:</b> R$ {calculateTotal().toFixed(2)}</p>
-            </div>
-
             <style jsx>{`
                 .header {
                     display: flex;
@@ -382,7 +414,7 @@ export default function ContasPage() {
                 }
                 .toggle-dark-mode,
                 .user-icon,
-                .create-account-button {
+                .create-loan-button {
                     background: none;
                     border: none;
                     cursor: pointer;
@@ -392,31 +424,30 @@ export default function ContasPage() {
                 }
                 .toggle-dark-mode:hover,
                 .user-icon:hover,
-                .create-account-button:hover {
+                .create-loan-button:hover {
                     background-color: #e0e0e0;
                 }
                 .header.dark .toggle-dark-mode:hover,
-                .header.dark .create-account-button:hover,
+                .header.dark .create-loan-button:hover,
                 .header.dark .user-icon:hover {
                     background-color: #333;
                 }
-                .contas-container {
+                .emprestimos-container {
                     padding: 1rem;
                     background-color: #f1f1f1;
                     min-height: calc(100vh);
                     transition: background-color 0.3s ease, color 0.3s ease;
                 }
-                .contas-container.dark {
+                .emprestimos-container.dark {
                     background-color: #121212;
                     color: white;
                 }
-                .contas-list {
+                .emprestimos-list {
                     list-style: none;
                     padding: 0;
                     margin: 0;
                 }
-
-                .contas-list li {
+                .emprestimos-list li {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -428,65 +459,39 @@ export default function ContasPage() {
                     transition: background-color 0.3s ease, color 0.3s ease;
                     color: black;
                 }
-
-                .contas-container.dark .contas-list li {
+                .emprestimos-container.dark .emprestimos-list li {
                     background: #1e1e1e;
                     color: white;
                 }
-
-                .conta-info {
+                .emprestimo-info {
                     display: flex;
                     flex-direction: column;
                 }
-
-                .conta-nome {
+                .emprestimo-nome {
                     font-size: 1.2rem;
                     font-weight: bold;
                     margin-bottom: 0.5rem;
                 }
-
-                .conta-valor {
+                .emprestimo-valor,
+                .emprestimo-valor-pago,
+                .emprestimo-valor-restante {
                     font-size: 1rem;
                     color: #555;
                 }
-
-                .contas-container.dark .conta-valor {
+                .emprestimos-container.dark .emprestimo-valor,
+                .emprestimos-container.dark .emprestimo-valor-pago,
+                .emprestimos-container.dark .emprestimo-valor-restante {
                     color: #bbb;
                 }
-
                 .action-container {
                     display: flex;
                     align-items: center;
                     gap: 1rem;
                 }
-                .conta-status {
-                    font-size: 0.9rem;
-                    font-weight: bold;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 4px;
-                    white-space: nowrap;
-                }
-
-                .conta-status.aberta {
-                    background-color: #28a745;
-                    color: white;
-                }
-
-                .conta-status.paga {
-                    background-color: #007bff;
-                    color: white;
-                }
-
-                .conta-status.atrasada {
-                    background-color: #dc3545;
-                    color: white;
-                }
-
                 .action-buttons {
                     display: flex;
                     gap: 0.5rem;
                 }
-
                 .edit-button,
                 .delete-button {
                     background: none;
@@ -494,20 +499,13 @@ export default function ContasPage() {
                     cursor: pointer;
                     transition: color 0.3s ease;
                 }
-
                 .edit-button:hover {
                     color: #007bff;
                 }
-
                 .delete-button:hover {
                     color: #dc3545;
                 }
-                .error-message {
-                    color: red;
-                    text-align: center;
-                    margin: 1rem 0;
-                }
-                 .modal-backdrop {
+                .modal-backdrop {
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -532,12 +530,10 @@ export default function ContasPage() {
                     animation: slideUp 0.3s ease-in-out forwards;
                     transition: background-color 0.3s ease, color 0.3s ease;
                 }
-
                 .modal.dark {
                     background-color: #1e1e1e;
                     color: #f5f5f5;
                 }
-
                 .modal h2 {
                     font-size: 1.5rem;
                     font-weight: 600;
@@ -545,11 +541,9 @@ export default function ContasPage() {
                     color: #333;
                     transition: color 0.3s ease;
                 }
-
                 .modal.dark h2 {
                     color: #f5f5f5;
                 }
-
                 .modal input,
                 .modal select {
                     width: 100%;
@@ -563,31 +557,26 @@ export default function ContasPage() {
                     outline: none;
                     transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
                 }
-
                 .modal input:focus,
                 .modal select:focus {
                     border-color: #007bff;
                 }
-
                 .modal.dark input,
                 .modal.dark select {
                     color: #f5f5f5;
                     background-color: #2a2a2a;
                     border-color: #555;
                 }
-
                 .modal.dark input:focus,
                 .modal.dark select:focus {
                     border-color: #007bff;
                 }
-
                 .modal-actions {
                     display: flex;
                     justify-content: flex-end;
                     gap: 1rem;
                     margin-top: 1rem;
                 }
-
                 .modal-actions button {
                     background-color: #007bff;
                     color: #fff;
@@ -599,25 +588,20 @@ export default function ContasPage() {
                     cursor: pointer;
                     transition: background-color 0.3s ease;
                 }
-
                 .modal-actions button:hover {
                     background-color: #0056b3;
                 }
-
                 .modal-actions button:last-child {
                     background-color: #e0e0e0;
                     color: #333;
                 }
-
                 .modal-actions button:last-child:hover {
                     background-color: #d6d6d6;
                 }
-
                 .modal.dark .modal-actions button:last-child {
                     background-color: #333;
                     color: #f5f5f5;
                 }
-
                 .modal.dark .modal-actions button:last-child:hover {
                     background-color: #444;
                 }
@@ -635,7 +619,6 @@ export default function ContasPage() {
                         opacity: 1;
                     }
                 }
-
                 @keyframes slideUp {
                     from {
                         opacity: 0;
@@ -645,20 +628,6 @@ export default function ContasPage() {
                         opacity: 1;
                         transform: translateY(0);
                     }
-                }
-                .footer {
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
-                    width: 100%;
-                    background-color: ${isDarkMode ? '#1e1e1e' : '#f9f9f9'};
-                    color: ${isDarkMode ? 'white' : 'black'};
-                    padding: 0.8rem;
-                    text-align: center;
-                    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-                }
-                .footer p {
-                    font-size: 18px;
                 }
                 .form-group {
                     display: flex;
@@ -702,6 +671,39 @@ export default function ContasPage() {
                 .modal.dark .form-group select:focus {
                     border-color: #007bff;
                 }
+                .emprestimo-status {
+                    font-size: 0.9rem;
+                    font-weight: bold;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 4px;
+                    white-space: nowrap;
+                    display: inline-block;
+                }
+
+                .emprestimo-status.pendente {
+                    background-color: #ffc107;
+                    color: #212529;
+                }
+
+                .emprestimo-status.quitado {
+                    background-color: #28a745;
+                    color: white;
+                }
+
+                .emprestimo-status.cancelado {
+                    background-color: #dc3545;
+                    color: white;
+                }
+                .remaining-value {
+                    font-size: 0.9rem;
+                    color: #555;
+                    margin-bottom: 1rem;
+                }
+
+                .modal.dark .remaining-value {
+                    color: #bbb;
+                }
+
             `}</style>
         </>
     );
