@@ -21,7 +21,7 @@
   "lang": "pt-BR",
   "name": "Anotações",
   "short_name": "Anotações",
-  "start_url": "http://notes-msqtapp.ddns.net/",
-  "scope": "http://notes-msqtapp.ddns.net/",
+  "start_url": "https://notes-msqtapp.ddns.net/",
+  "scope": "https://notes-msqtapp.ddns.net/",
   "description": "Anotações"
 }
