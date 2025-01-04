@@ -14,7 +14,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Anotações",
-  description: "Anote suas dívidas, emprestimos, contas em um só lugar",
+  description: "Anote suas dívidas, empréstimos, contas em um só lugar",
+  manifest: "/manifest.json",
+  keywords: ["anotações", "PWA", "finanças", "Android"],
+  themeColor: "#121212",
+  icons: [
+    { rel: "icon", url: "/favicon.ico" },
+    { rel: "apple-touch-icon", url: "/icon-192x192.png" },
+  ],
+};
+
+export const viewport = {
+  minimumScale: 1,
+  initialScale: 1,
+  width: "device-width",
+  shrinkToFit: "no",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
