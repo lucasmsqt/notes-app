@@ -11,7 +11,6 @@ interface Emprestimo {
     parcelas: number;
     valor_pago: number;
     valor_pago_cumulativo?: number;
-    valor_restante?: number;
     status: string;
 }
 
@@ -44,7 +43,6 @@ export default function EmprestimosPage() {
 
         if (token && userId) {
             try {
-                console.log('Fazendo requisição para /emprestimos/listar...');
                 const res = await fetch('/emprestimos/listar', {
                     method: 'POST',
                     headers: {
@@ -120,7 +118,7 @@ export default function EmprestimosPage() {
             : '/emprestimos/criar';
         const method = isEditing ? 'PUT' : 'POST';
 
-        const { valor_restante, ...dataToSend } = modalData;
+        const { ...dataToSend } = modalData;
 
         try {
             const res = await fetch(endpoint, {
